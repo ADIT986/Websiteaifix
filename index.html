@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Violation AI — DeepThink R1</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg:       #0e0e10;
+            --surface:  #141416;
+            --raised:   #1a1a1e;
+            --line:     #242428;
+            --line-hi:  #333338;
+            --red:      #c8102e;
+            --red-soft: rgba(200,16,46,0.10);
+            --red-glow: rgba(200,16,46,0.30);
+            --teal:     #00b896;
+            --teal-soft:rgba(0,184,150,0.08);
+            --gold:     #c9922a;
+            --gold-soft:rgba(201,146,42,0.10);
+            --t1:       #eeeef2;
+            --t2:       #7a7a8c;
+            --t3:       #44444e;
+            --sidebar:  260px;
+            --r:        8px;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'DM Mono', monospace;
+            background: var(--bg);
+            color: var(--t1);
+            display: flex;
+        }
+
+        /* ========== SIDEBAR (desktop) ========== */
+        .sidebar {
+            width: var(--sidebar);
+            background: var(--surface);
+            border-right: 1px solid var(--line);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+            z-index: 20;
+        }
+
+        .sidebar-top {
+            padding: 22px 18px 18px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .wordmark {
+            font-family: 'DM Serif Display', serif;
+            font-size: 17px;
+            letter-spacing: 0.02em;
+            color: var(--t1);
+        }
+
+        .wordmark em { font-style: italic; color: var(--red); }
+
+        .wordmark-sub {
+            margin-top: 5px;
+            font-size: 9px;
+            color: var(--t3);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .new-btn {
+            display: block;
+            width: 100%;
+            margin-top: 14px;
+            padding: 9px 0;
+            background: transparent;
+            border: 1px solid var(--line-hi);
+            border-radius: var(--r);
+            color: var(--t2);
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            cursor: pointer;
+            text-align: center;
+            transition: border-color .2s, color .2s;
+        }
+
+        .new-btn:hover { border-color: var(--red); color: var(--red); }
+
+        .sidebar-section { padding: 16px 18px 8px; }
+
+        .sec-label {
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--t3);
+            margin-bottom: 8px;
+        }
+
+        .hist-item {
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--t2);
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-left: 2px solid transparent;
+        }
+
+        .hist-item:hover { background: var(--raised); color: var(--t1); }
+        .hist-item.active {
+            background: var(--red-soft);
+            color: var(--red);
+            border-left-color: var(--red);
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--line);
+            padding: 16px 18px;
+        }
+
+        .cfg-label {
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--t3);
+            margin-bottom: 8px;
+        }
+
+        .cfg-row { display: flex; gap: 6px; }
+
+        .cfg-input {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 7px 9px;
+            color: var(--teal);
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            outline: none;
+        }
+
+        .cfg-input:focus { border-color: var(--red); }
+
+        .cfg-save {
+            background: var(--raised);
+            border: 1px solid var(--line-hi);
+            border-radius: 6px;
+            padding: 7px 10px;
+            color: var(--t2);
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        .cfg-save:hover { color: var(--red); border-color: var(--red); }
+
+        .conn-row {
+            margin-top: 9px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 10px;
+        }
+
+        .conn-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--t3);
+            transition: background .3s;
+        }
+        .conn-dot.online { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+        .conn-dot.offline { background: var(--red); }
+        .conn-txt.online { color: #22c55e; }
+
+        /* ========== MAIN ========== */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            height: 52px;
+            border-bottom: 1px solid var(--line);
+            background: var(--surface);
+            flex-shrink: 0;
+        }
+
+        .mode-group {
+            display: flex;
+            gap: 2px;
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: var(--r);
+            padding: 3px;
+        }
+
+        .mode-btn {
+            padding: 5px 12px;
+            border-radius: 5px;
+            border: none;
+            background: transparent;
+            color: var(--t2);
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .mode-btn.active { background: var(--red); color: #fff; }
+
+        .model-tag {
+            font-size: 9px;
+            color: var(--t3);
+            padding: 4px 10px;
+            border: 1px solid var(--line);
+            border-radius: 20px;
+        }
+        .model-tag b { color: var(--teal); font-weight: 400; }
+
+        .clear-btn {
+            background: transparent;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 5px 12px;
+            color: var(--t3);
+            font-size: 10px;
+            cursor: pointer;
+        }
+        .clear-btn:hover { border-color: var(--red); color: var(--red); }
+
+        /* ========== MESSAGES ========== */
+        .msgs {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 0;
+        }
+
+        .mrow {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 20px;
+            animation: rise 0.2s ease;
+        }
+        .mrow + .mrow { margin-top: 20px; }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .mrow.user { display: flex; justify-content: flex-end; }
+        .ubub {
+            background: var(--red);
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 12px 12px 2px 12px;
+            max-width: 75%;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .mrow.ai { display: flex; gap: 12px; align-items: flex-start; }
+        .ai-mark {
+            width: 28px; height: 28px;
+            border: 1px solid var(--red);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'DM Serif Display', serif;
+            font-size: 13px;
+            color: var(--red);
+            flex-shrink: 0;
+        }
+        .ai-body { flex: 1; }
+        .ai-lbl {
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--red);
+            margin-bottom: 6px;
+        }
+        .abub {
+            background: var(--raised);
+            border: 1px solid var(--line);
+            border-radius: 2px 12px 12px 12px;
+            padding: 12px 16px;
+            font-size: 13px;
+            line-height: 1.65;
+        }
+
+        .think-block {
+            border-left: 2px solid var(--gold);
+            background: var(--gold-soft);
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+        .think-head {
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            gap: 8px;
+            font-size: 10px;
+            color: var(--gold);
+        }
+        .think-body {
+            padding: 10px 12px;
+            font-size: 12px;
+            color: var(--t2);
+            border-top: 1px solid rgba(201,146,42,.2);
+        }
+        .ans-sep {
+            font-size: 9px;
+            color: var(--teal);
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .sys-row { text-align: center; margin: 8px auto; }
+        .sys-pill {
+            font-size: 10px;
+            color: var(--t3);
+            padding: 3px 12px;
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .tdots { display: flex; gap: 5px; padding: 4px 0; }
+        .tdots i {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--red);
+            animation: blink 1.2s infinite;
+        }
+        @keyframes blink {
+            0%,100%{ opacity: .2; }
+            50%{ opacity: 1; }
+        }
+
+        .welcome {
+            max-width: 440px;
+            margin: 40px auto 0;
+            padding: 0 20px;
+        }
+        .wlc-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+        .wlc-title em { color: var(--red); font-style: italic; }
+        .wlc-desc {
+            font-size: 12px;
+            color: var(--t2);
+            margin-bottom: 24px;
+        }
+        .wlc-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .wlc-card {
+            border: 1px solid var(--line);
+            border-radius: var(--r);
+            padding: 12px;
+            cursor: pointer;
+        }
+        .wlc-card:hover { border-color: var(--red); background: var(--red-soft); }
+        .wc-t { font-size: 12px; font-weight: 500; margin-bottom: 4px; }
+        .wc-d { font-size: 10px; color: var(--t3); }
+
+        /* ========== INPUT ========== */
+        .input-wrap {
+            padding: 12px 20px 20px;
+            border-top: 1px solid var(--line);
+            background: var(--surface);
+            flex-shrink: 0;
+        }
+        .input-inner {
+            max-width: 720px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .input-field {
+            width: 100%;
+            background: var(--raised);
+            border: 1px solid var(--line-hi);
+            border-radius: 10px;
+            padding: 12px 50px 12px 16px;
+            color: var(--t1);
+            font-family: 'DM Mono', monospace;
+            font-size: 13px;
+            resize: none;
+            min-height: 48px;
+            outline: none;
+        }
+        .input-field:focus { border-color: var(--red); }
+        .send-btn {
+            position: absolute;
+            right: 8px;
+            bottom: 8px;
+            width: 32px;
+            height: 32px;
+            background: var(--red);
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+        }
+        .arrow {
+            width: 12px;
+            height: 12px;
+            border-right: 2px solid #fff;
+            border-top: 2px solid #fff;
+            transform: rotate(-45deg) translate(1px, -1px);
+            margin: 0 auto;
+        }
+        .input-meta {
+            max-width: 720px;
+            margin: 6px auto 0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            color: var(--t3);
+        }
+
+        /* ========== FLOATING BACKEND PANEL (HP) ========== */
+        .fab-btn {
+            position: fixed;
+            bottom: 90px;
+            right: 16px;
+            width: 48px;
+            height: 48px;
+            background: var(--red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            z-index: 30;
+            border: none;
+            font-size: 20px;
+            transition: transform 0.2s;
+        }
+        .fab-btn:active { transform: scale(0.95); }
+
+        .mobile-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            border-top: 2px solid var(--red);
+            padding: 16px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 40;
+            border-radius: 16px 16px 0 0;
+        }
+        .mobile-panel.open { transform: translateY(0); }
+        .panel-title {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--red);
+        }
+        .mobile-panel .cfg-row { margin-bottom: 10px; }
+        .mobile-panel .conn-row { margin-top: 8px; }
+        .close-panel {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: var(--t3);
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        @media (min-width: 768px) {
+            .fab-btn, .mobile-panel { display: none; }
+        }
+        @media (max-width: 640px) {
+            .sidebar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- SIDEBAR DESKTOP -->
+<aside class="sidebar">
+    <div class="sidebar-top">
+        <div class="wordmark"><em>Violation</em> AI</div>
+        <div class="wordmark-sub">DeepThink R1 System</div>
+        <button class="new-btn" onclick="newChat()">+ New Conversation</button>
+    </div>
+    <div class="sidebar-section">
+        <div class="sec-label">History</div>
+        <div class="hist-item active">Current session</div>
+    </div>
+    <div class="sidebar-footer">
+        <div class="cfg-label">Backend</div>
+        <div class="cfg-row">
+            <input class="cfg-input" id="backendUrlDesktop" type="text" placeholder="https://xxxx.trycloudflare.com">
+            <button class="cfg-save" onclick="saveUrlDesktop()">Save</button>
+        </div>
+        <div class="conn-row">
+            <div class="conn-dot offline" id="connDotDesktop"></div>
+            <span class="conn-txt" id="connTxtDesktop">Offline</span>
+        </div>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+    <header class="header">
+        <div class="mode-group">
+            <button class="mode-btn" data-mode="normal">Normal</button>
+            <button class="mode-btn active" data-mode="r1">R1 Thinking</button>
+        </div>
+        <div class="header-right">
+            <div class="model-tag"><b id="modelName">—</b> Local</div>
+            <button class="clear-btn" onclick="clearChat()">Clear</button>
+        </div>
+    </header>
+
+    <div class="msgs" id="messages">
+        <div id="welcome" class="welcome">
+            <div class="wlc-title">Good to<br>see you.<br><em>Ask</em> anything.</div>
+            <p class="wlc-desc">Set backend URL (Cloudflare Tunnel) lalu mulai chat.<br>Klik tombol ⚡ merah di pojok kanan bawah.</p>
+            <div class="wlc-grid">
+                <div class="wlc-card" onclick="fillInput('Jelaskan cara kerja neural network secara mendalam')"><div class="wc-t">Deep Analysis</div><div class="wc-d">R1 thinking process</div></div>
+                <div class="wlc-card" onclick="fillInput('Tulis kode Python untuk web scraping')"><div class="wc-t">Code Generation</div><div class="wc-d">Step-by-step</div></div>
+                <div class="wlc-card" onclick="fillInput('Apa perbedaan DeepSeek R1 dan GPT-4?')"><div class="wc-t">AI Comparison</div><div class="wc-d">Bandingkan model</div></div>
+                <div class="wlc-card" onclick="fillInput('Bantu debug kode JavaScript')"><div class="wc-t">Debug & Fix</div><div class="wc-d">Identifikasi bug</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="input-wrap">
+        <div class="input-inner">
+            <textarea class="input-field" id="msgInput" placeholder="Ketik pesan..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+            <button class="send-btn" onclick="sendMsg()"><div class="arrow"></div></button>
+        </div>
+        <div class="input-meta"><span>Enter kirim · Shift+Enter new line</span><span id="procLabel">⚡ Ready</span></div>
+    </div>
+</main>
+
+<!-- FLOATING BUTTON + PANEL HP -->
+<button class="fab-btn" id="fabBtn">⚡</button>
+<div class="mobile-panel" id="mobilePanel">
+    <button class="close-panel" id="closePanelBtn">✕</button>
+    <div class="panel-title">⚡ Backend URL (Cloudflare)</div>
+    <div class="cfg-row">
+        <input class="cfg-input" id="backendUrlMobile" type="text" placeholder="https://xxxx.trycloudflare.com">
+        <button class="cfg-save" onclick="saveUrlMobile()">Save</button>
+    </div>
+    <div class="conn-row">
+        <div class="conn-dot offline" id="connDotMobile"></div>
+        <span class="conn-txt" id="connTxtMobile">Offline</span>
+    </div>
+</div>
+
+<script>
+    // === GLOBAL STATE ===
+    let sid = localStorage.getItem('sid') || Math.random().toString(36).slice(2,10);
+    localStorage.setItem('sid', sid);
+    let mode = localStorage.getItem('aiMode') || 'r1';
+    let currentBackendUrl = localStorage.getItem('backendUrl') || '';
+
+    // === MODE BUTTONS ===
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        if (btn.dataset.mode === mode) btn.classList.add('active');
+        btn.onclick = () => {
+            mode = btn.dataset.mode;
+            localStorage.setItem('aiMode', mode);
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            sys(`Mode: ${mode === 'r1' ? 'R1 Thinking' : 'Normal'}`);
+        };
+    });
+
+    // === AUTO LOAD SAVED URL ===
+    if (currentBackendUrl) {
+        document.getElementById('backendUrlDesktop').value = currentBackendUrl;
+        document.getElementById('backendUrlMobile').value = currentBackendUrl;
+        checkConnection();
+    }
+
+    // === SAVE URL (desktop + mobile) ===
+    function saveUrlDesktop() { saveCommon('backendUrlDesktop'); }
+    function saveUrlMobile() { saveCommon('backendUrlMobile'); }
+    function saveCommon(inputId) {
+        const newUrl = document.getElementById(inputId).value.trim();
+        if (!newUrl) return;
+        currentBackendUrl = newUrl;
+        localStorage.setItem('backendUrl', currentBackendUrl);
+        document.getElementById('backendUrlDesktop').value = currentBackendUrl;
+        document.getElementById('backendUrlMobile').value = currentBackendUrl;
+        checkConnection();
+        sys(`Backend URL disimpan: ${currentBackendUrl.substring(0, 40)}...`);
+        document.getElementById('mobilePanel').classList.remove('open');
+    }
+
+    // === CHECK CONNECTION ===
+    async function checkConnection() {
+        if (!currentBackendUrl) {
+            setConnectionStatus('offline', 'No URL');
+            return;
+        }
+        setConnectionStatus('connecting', '...');
+        try {
+            const res = await fetch(`${currentBackendUrl}/models`, { signal: AbortSignal.timeout(8000) });
+            if (res.ok) {
+                const data = await res.json();
+                const modelName = data.models?.[0] || 'DeepSeek 1.3B';
+                document.getElementById('modelName').innerText = modelName;
+                setConnectionStatus('online', 'Online');
+            } else throw new Error('HTTP ' + res.status);
+        } catch {
+            setConnectionStatus('offline', 'Offline');
+        }
+    }
+
+    function setConnectionStatus(status, text) {
+        const dotDesktop = document.getElementById('connDotDesktop');
+        const txtDesktop = document.getElementById('connTxtDesktop');
+        const dotMobile = document.getElementById('connDotMobile');
+        const txtMobile = document.getElementById('connTxtMobile');
+        [dotDesktop, dotMobile].forEach(d => {
+            d.className = `conn-dot ${status === 'online' ? 'online' : 'offline'}`;
+        });
+        [txtDesktop, txtMobile].forEach(t => {
+            t.innerText = text;
+            if (status === 'online') t.classList.add('online');
+            else t.classList.remove('online');
+        });
+    }
+
+    // === UI HELPERS ===
+    function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 140) + 'px'; }
+    function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } }
+    function fillInput(t) { const el = document.getElementById('msgInput'); el.value = t; el.focus(); autoResize(el); }
+    function sys(txt) {
+        hideWelcome();
+        const w = document.getElementById('messages');
+        const div = document.createElement('div'); div.className = 'sys-row';
+        div.innerHTML = `<div class="sys-pill">${escapeHtml(txt)}</div>`;
+        w.appendChild(div); w.scrollTop = w.scrollHeight;
+    }
+    function hideWelcome() {
+        const w = document.getElementById('welcome');
+        if (w) w.remove();
+    }
+    function addUser(txt) {
+        hideWelcome();
+        const w = document.getElementById('messages');
+        const div = document.createElement('div'); div.className = 'mrow user';
+        div.innerHTML = `<div class="ubub">${escapeHtml(txt)}</div>`;
+        w.appendChild(div); w.scrollTop = w.scrollHeight;
+    }
+    function addTyping() {
+        hideWelcome();
+        const id = 'ty-' + Date.now();
+        const w = document.getElementById('messages');
+        const div = document.createElement('div'); div.id = id; div.className = 'mrow ai';
+        div.innerHTML = `<div class="ai-mark">V</div><div class="ai-body"><div class="ai-lbl">Violation AI</div><div class="abub"><div class="tdots"><i></i><i></i><i></i></div></div></div>`;
+        w.appendChild(div); w.scrollTop = w.scrollHeight;
+        return id;
+    }
+    function removeTyping(id) { const el = document.getElementById(id); if (el) el.remove(); }
+    function addAI(text) {
+        const w = document.getElementById('messages');
+        const div = document.createElement('div'); div.className = 'mrow ai';
+        div.innerHTML = `<div class="ai-mark">V</div><div class="ai-body"><div class="ai-lbl">Violation AI</div><div class="abub" style="white-space:pre-wrap;">${escapeHtml(text)}</div></div>`;
+        w.appendChild(div); w.scrollTop = w.scrollHeight;
+    }
+    function addR1(thinking, answer) {
+        const id = 'think-' + Date.now();
+        const w = document.getElementById('messages');
+        const div = document.createElement('div'); div.className = 'mrow ai';
+        div.innerHTML = `
+            <div class="ai-mark">V</div>
+            <div class="ai-body">
+                <div class="ai-lbl">Violation AI · R1</div>
+                <div class="abub">
+                    <div class="think-block">
+                        <div class="think-head" onclick="toggleThink('${id}')">
+                            <span>🧠 THINKING PROCESS</span>
+                            <span style="margin-left:auto;">▼</span>
+                        </div>
+                        <div class="think-body" id="${id}" style="display:block;">${escapeHtml(thinking)}</div>
+                    </div>
+                    <div class="ans-sep">📌 ANSWER</div>
+                    <div style="white-space:pre-wrap;">${escapeHtml(answer)}</div>
+                </div>
+            </div>`;
+        w.appendChild(div); w.scrollTop = w.scrollHeight;
+    }
+    window.toggleThink = function(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    };
+    function escapeHtml(s) { return s.replace(/[&<>]/g, function(m) { return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m]; }); }
+
+    // === SEND MESSAGE ===
+    async function sendMsg() {
+        const inp = document.getElementById('msgInput');
+        const msg = inp.value.trim();
+        if (!msg) return;
+        if (!currentBackendUrl) { sys('❌ Set backend URL dulu (klik tombol ⚡ merah)'); return; }
+
+        addUser(msg);
+        inp.value = ''; inp.style.height = 'auto';
+        const typingId = addTyping();
+        const proc = document.getElementById('procLabel');
+        proc.innerText = mode === 'r1' ? '🧠 Thinking...' : '⏳ Processing...';
+
+        let prompt = msg;
+        if (mode === 'r1') {
+            prompt = `[THINKING MODE ACTIVE]\nPertanyaan: ${msg}\n\nFormat jawaban:\n[THINKING]\n(proses analisis, minimal 3-4 kalimat)\n[/THINKING]\n[ANSWER]\n(jawaban final)\n[/ANSWER]`;
+        }
+
+        try {
+            const res = await fetch(`${currentBackendUrl}/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: prompt, session_id: sid + '_' + mode })
+            });
+            removeTyping(typingId);
+            if (res.ok) {
+                const data = await res.json();
+                const reply = data.response;
+                if (mode === 'r1') {
+                    const thinkMatch = reply.match(/\[THINKING\]([\s\S]*?)\[\/THINKING\]/);
+                    const ansMatch = reply.match(/\[ANSWER\]([\s\S]*?)\[\/ANSWER\]/);
+                    if (thinkMatch && ansMatch) addR1(thinkMatch[1].trim(), ansMatch[1].trim());
+                    else addAI(reply);
+                } else addAI(reply);
+            } else addAI(`Error: ${res.status}`);
+        } catch (err) {
+            removeTyping(typingId);
+            addAI(`❌ Gagal konek ke backend.\nPastikan Termux dan Cloudflare Tunnel aktif.\nURL: ${currentBackendUrl}`);
+        }
+        proc.innerText = '⚡ Ready';
+    }
+
+    async function clearChat() {
+        if (currentBackendUrl) {
+            try {
+                await fetch(`${currentBackendUrl}/clear`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: sid + '_normal' }) });
+                await fetch(`${currentBackendUrl}/clear`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: sid + '_r1' }) });
+            } catch(e) {}
+        }
+        newChat();
+    }
+    function newChat() {
+        document.getElementById('messages').innerHTML = `<div id="welcome" class="welcome">
+            <div class="wlc-title">Good to<br>see you.<br><em>Ask</em> anything.</div>
+            <p class="wlc-desc">Set backend URL (Cloudflare Tunnel) lalu mulai chat.<br>Klik tombol ⚡ merah di pojok kanan bawah.</p>
+            <div class="wlc-grid">
+                <div class="wlc-card" onclick="fillInput('Jelaskan cara kerja neural network secara mendalam')"><div class="wc-t">Deep Analysis</div><div class="wc-d">R1 thinking process</div></div>
+                <div class="wlc-card" onclick="fillInput('Tulis kode Python untuk web scraping')"><div class="wc-t">Code Generation</div><div class="wc-d">Step-by-step</div></div>
+                <div class="wlc-card" onclick="fillInput('Apa perbedaan DeepSeek R1 dan GPT-4?')"><div class="wc-t">AI Comparison</div><div class="wc-d">Bandingkan model</div></div>
+                <div class="wlc-card" onclick="fillInput('Bantu debug kode JavaScript')"><div class="wc-t">Debug & Fix</div><div class="wc-d">Identifikasi bug</div></div>
+            </div>
+        </div>`;
+        sid = Math.random().toString(36).slice(2,10);
+    }
+
+    // === FLOATING PANEL ===
+    const fab = document.getElementById('fabBtn');
+    const panel = document.getElementById('mobilePanel');
+    const closePanel = document.getElementById('closePanelBtn');
+    fab.onclick = () => panel.classList.toggle('open');
+    closePanel.onclick = () => panel.classList.remove('open');
+
+    setInterval(checkConnection, 25000);
+</script>
+</body>
+</html>
